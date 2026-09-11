@@ -29,6 +29,9 @@ class Settings extends Security_Controller {
             $value = $this->request->getPost($setting);
 
             if ($setting == "landing_page" || $setting == "show_logo_in_signin_page" || $setting == "show_background_image_in_signin_page") {
+                if (is_null($value)) {
+                    $value = "";
+                }
                 $this->Settings_model->save_setting($setting, $value); //can be saved as blank also
             } else if ($value || $value === "0") {
                 if ($setting === "site_logo") {
