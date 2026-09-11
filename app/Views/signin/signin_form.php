@@ -65,10 +65,6 @@
         <?php echo form_close(); ?>
         <div class="mt5"><?php echo anchor("signin/request_reset_password", app_lang("forgot_password")); ?></div>
 
-        <?php if (!get_setting("disable_client_signup")) { ?>
-            <div class="mt20"><?php echo app_lang("you_dont_have_an_account") ?> &nbsp; <?php echo anchor("signup", app_lang("signup")); ?></div>
-        <?php } ?>
-
         <?php
         app_hooks()->do_action('app_hook_signin_extension');
         ?>
