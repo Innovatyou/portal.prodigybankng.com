@@ -57,9 +57,12 @@
             displayLength: 1000
         });
 
-        /*load a message details*/
-        $("#role-table").on("click", "tbody tr", function () {
-            //don't load this message if already has selected.
+        // Load permissions only for row selection, not edit/delete actions.
+        $("#role-table").on("click", "tbody tr", function (event) {
+            if ($(event.target).closest("[data-action], [data-act='ajax-modal']").length) {
+                return;
+            }
+            // Don't reload the selected role.
             if (!$(this).hasClass("active")) {
                 var role_id = $(this).find(".role-row").attr("data-id");
                 if (role_id) {

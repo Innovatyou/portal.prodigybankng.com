@@ -4891,10 +4891,11 @@ deleteHandler = function (e, callback, postData = {}) {
         window[bypassSubmitFunction]($target);
     }
 
-    appAjaxRequest({
+    $.ajax({
         url: url,
         type: 'POST',
         dataType: 'json',
+        timeout: 30000,
         data: postData,
         success: function (result) {
             if (result.success) {
@@ -4919,6 +4920,11 @@ deleteHandler = function (e, callback, postData = {}) {
             } else {
                 appAlert.error(result.message);
             }
+        },
+        error: function () {
+            appAlert.error(AppLanguage.somethingWentWrong);
+        },
+        complete: function () {
             appLoader.hide();
         }
     });
