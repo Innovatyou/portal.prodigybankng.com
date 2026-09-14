@@ -264,64 +264,90 @@ class Team_members extends Security_Controller {
     function send_invitation() {
         $this->access_only_admin_or_member_creator();
 
+        $email_array = $this->request->getPost('email');
+        if (!is_array($email_array) || !$email_array) {
+            echo json_encode(array('success' => false, 'message' => app_lang('enter_valid_email')));
+            return;
+        }
         $this->validate_submitted_data(array(
             "email.*" => "required|valid_email|max_length[100]",
             "role" => "numeric",
         ));
 
-        $email_array = $this->request->getPost('email');
         $email_array = array_unique($email_array);
-
-        $send_email = array();
-
         $role_id = $this->request->getPost('role');
-        $code = make_random_string();
-
-        foreach ($email_array as $email) {
-            if ($this->Users_model->is_email_exists($email)) {
-                echo json_encode(array("success" => false, 'message' => app_lang('duplicate_email')));
-                exit();
+        $sent_count = 0;
+        $stage = 'recipients';
+        try {
+            // Validate the whole batch before sending any invitations.
+            foreach ($email_array as $email) {
+                if ($this->Users_model->is_email_exists($email)) {
+                    echo json_encode(array('success' => false, 'message' => app_lang('duplicate_email')));
+                    return;
+                }
             }
 
-            $verification_data = array(
-                "type" => "invitation",
-                "code" => $code,
-                "params" => serialize(array(
-                    "email" => $email,
-                    "type" => "staff",
-                    "expire_time" => time() + (24 * 60 * 60), //make the invitation url with 24hrs validity
-                    "role_id" => $role_id
-                ))
+            $stage = 'template';
+            $email_template = $this->Email_templates_model->get_final_template('team_member_invitation');
+            if (!$email_template || empty($email_template->subject) || empty($email_template->message)) {
+                throw new \RuntimeException('Invitation email template is missing or empty.');
+            }
+
+            foreach ($email_array as $email) {
+                $stage = 'template';
+                $code = make_random_string();
+                $parser_data = array(
+                    'INVITATION_SENT_BY' => clean_data($this->login_user->first_name . ' ' . $this->login_user->last_name),
+                    'SIGNATURE' => $email_template->signature ?? '',
+                    'SITE_URL' => get_uri(),
+                    'LOGO_URL' => get_logo_url(),
+                    'INVITATION_URL' => get_uri('signup/accept_invitation/' . $code)
+                );
+                $message = $this->parser->setData($parser_data)->renderString($email_template->message);
+                $subject = $this->parser->setData($parser_data)->renderString($email_template->subject);
+
+                $stage = 'storage';
+                $verification_data = array(
+                    'type' => 'invitation',
+                    'code' => $code,
+                    'params' => serialize(array(
+                        'email' => $email,
+                        'type' => 'staff',
+                        'expire_time' => time() + (24 * 60 * 60),
+                        'role_id' => $role_id
+                    ))
+                );
+                if (!$this->Verification_model->ci_save($verification_data)) {
+                    throw new \RuntimeException('Unable to save invitation verification record.');
+                }
+
+                $stage = 'mail';
+                if (!send_app_mail($email, $subject, $message)) {
+                    throw new \RuntimeException('Mail transport returned failure.');
+                }
+                $sent_count++;
+            }
+        } catch (\Throwable $exception) {
+            // Do not expose transport exceptions: they can contain mail credentials.
+            $reference = bin2hex(random_bytes(6));
+            log_message('error', 'Team invitation failure {reference}: stage={stage}, exception={type}, file={file}, line={line}', array(
+                'reference' => $reference,
+                'stage' => $stage,
+                'type' => get_class($exception),
+                'file' => $exception->getFile(),
+                'line' => $exception->getLine()
+            ));
+            $messages = array(
+                'recipients' => 'Unable to check invitation recipients. Ask your administrator to check the database connection.',
+                'template' => 'Unable to prepare the invitation email. Check Settings > Email templates > Team member invitation.',
+                'storage' => 'Unable to save the invitation. Ask your administrator to check the verification table and database permissions.',
+                'mail' => 'Unable to send the invitation email. Check Settings > Email Settings and test the configured mail connection.'
             );
-
-            $this->Verification_model->ci_save($verification_data);
-
-
-            //get the send invitation template 
-            $email_template = $this->Email_templates_model->get_final_template("team_member_invitation"); //use default template
-
-            $parser_data["INVITATION_SENT_BY"] = clean_data($this->login_user->first_name . " " . $this->login_user->last_name);
-            $parser_data["SIGNATURE"] = $email_template->signature;
-            $parser_data["SITE_URL"] = get_uri();
-            $parser_data["LOGO_URL"] = get_logo_url();
-            $parser_data['INVITATION_URL'] = get_uri("signup/accept_invitation/" . $code);
-
-            //send invitation email
-            $message = $this->parser->setData($parser_data)->renderString($email_template->message);
-            $subject = $this->parser->setData($parser_data)->renderString($email_template->subject);
-
-            $send_email[] = send_app_mail($email, $subject, $message);
+            echo json_encode(array('success' => false, 'message' => $messages[$stage] . ' Invitations sent: ' . $sent_count . '. Reference: ' . $reference));
+            return;
         }
 
-        if (!in_array(false, $send_email)) {
-            if (count($send_email) != 0 && count($send_email) == 1) {
-                echo json_encode(array('success' => true, 'message' => app_lang("invitation_sent")));
-            } else {
-                echo json_encode(array('success' => true, 'message' => app_lang("invitations_sent")));
-            }
-        } else {
-            echo json_encode(array('success' => false, 'message' => app_lang('error_occurred')));
-        }
+        echo json_encode(array('success' => true, 'message' => app_lang($sent_count === 1 ? 'invitation_sent' : 'invitations_sent')));
     }
 
     //prepere the data for members list
