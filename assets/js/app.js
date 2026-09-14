@@ -3721,7 +3721,7 @@ var $appFilterXhrRequest = 'new';
             }, 1);
         });
 
-        var settings = appExtend({}, defaults, options);
+        var settings = $.extend({}, defaults, options);
         if (!settings) {
             return false;
         }

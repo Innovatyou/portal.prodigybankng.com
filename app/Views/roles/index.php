@@ -58,19 +58,27 @@
         });
 
         /*load a message details*/
-        $("body").on("click", "tr", function () {
+        $("#role-table").on("click", "tbody tr", function () {
             //don't load this message if already has selected.
             if (!$(this).hasClass("active")) {
                 var role_id = $(this).find(".role-row").attr("data-id");
                 if (role_id) {
                     appLoader.show();
-                    $("tr.active").removeClass("active");
+                    $("#role-table tr.active").removeClass("active");
                     $(this).addClass("active");
-                    appAjaxRequest({
+                    var $selectedRow = $(this);
+                    $.ajax({
                         url: "<?php echo get_uri("roles/permissions"); ?>/" + role_id,
+                        timeout: 30000,
                         success: function (result) {
-                            appLoader.hide();
                             $("#role-details-section").html(result);
+                        },
+                        error: function () {
+                            $selectedRow.removeClass("active");
+                            appAlert.error(AppLanguage.somethingWentWrong);
+                        },
+                        complete: function () {
+                            appLoader.hide();
                         }
                     });
                 }
