@@ -113,7 +113,13 @@ if (!function_exists('load_js')) {
         $version = get_setting("app_version");
 
         foreach ($array as $uri) {
-            echo "<script type='text/javascript'  src='" . base_url($uri) . "?v=$version'></script>";
+            // Custom deployments may change scripts without changing app_version.
+            $asset_path = FCPATH . ltrim($uri, "/");
+            $asset_version = $version;
+            if (is_file($asset_path)) {
+                $asset_version .= "." . filemtime($asset_path);
+            }
+            echo "<script type='text/javascript'  src='" . base_url($uri) . "?v=$asset_version'></script>";
         }
     }
 }
