@@ -372,7 +372,7 @@ $(document).ready(function () {
         if ($(target).html() === "" || $this.attr("data-reload")) {
             appLoader.show({ container: target, css: "right:50%; bottom:auto;" });
 
-            appAjaxRequest({
+            $.ajax({
                 url: loadurl,
                 cache: false,
                 type: 'GET',
@@ -393,6 +393,7 @@ $(document).ready(function () {
                 },
                 error: function () {
                     appLoader.hide();
+                    $(target).empty();
                     appAlert.error(AppLanguage.somethingWentWrong);
                 }
             });
