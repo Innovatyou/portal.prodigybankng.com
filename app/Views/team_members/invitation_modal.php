@@ -15,11 +15,10 @@
                                     "name" => "email[]",
                                     "class" => "form-control",
                                     "placeholder" => app_lang('email'),
-                                    "autofocus" => true,
                                     "data-rule-required" => true,
                                     "data-msg-required" => app_lang("field_required"),
                                     "data-rule-email" => true,
-                                    "data-msg-required" => app_lang("enter_valid_email")
+                                    "data-msg-email" => app_lang("enter_valid_email")
                                 ));
                                 ?>
                             </div>    
@@ -85,4 +84,4 @@
         $("#user-role").select2();
 
     });
-</script>    
+</script>
