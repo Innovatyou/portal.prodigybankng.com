@@ -10,6 +10,27 @@ defined('PLUGINPATH') or exit('No direct script access allowed');
   Author: Prodigy Bank
  */
 
+use App\Controllers\Security_Controller;
+
+//add "Email" to the sidebar (Settings > Left Menu > available items), visible only
+//to admins/settings-admins since the plugin's controllers are restricted to them
+app_hooks()->add_filter('app_filter_staff_left_menu', function ($sidebar_menu) {
+    $instance = new Security_Controller();
+
+    if ($instance->login_user->is_admin || get_array_value($instance->login_user->permissions, "can_manage_all_kinds_of_settings")) {
+        $sidebar_menu["cpanel_email"] = array(
+            "name" => "cpanel_email",
+            "url" => "cpanel_email",
+            "class" => "mail",
+            "sub_pages" => array(
+                "cpanel_email/forwarders"
+            )
+        );
+    }
+
+    return $sidebar_menu;
+});
+
 //add admin setting menu items (Settings > Plugins > cPanel Email Accounts / Forwarders)
 app_hooks()->add_filter('app_filter_admin_settings_menu', function ($settings_menu) {
     $settings_menu["plugins"][] = array("name" => "cpanel_email_accounts", "url" => "cpanel_email");

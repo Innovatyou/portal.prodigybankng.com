@@ -4,6 +4,8 @@ $lang["manage"] = "Manage";
 $lang["domain"] = "Domain";
 $lang["unlimited"] = "Unlimited";
 
+$lang["cpanel_email"] = "Email";
+
 $lang["cpanel_email_accounts"] = "cPanel Email Accounts";
 $lang["cpanel_email_connection_settings"] = "Connection Settings";
 $lang["cpanel_email_add_account"] = "Add Email Account";
