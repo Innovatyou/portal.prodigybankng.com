@@ -10,9 +10,10 @@ defined('PLUGINPATH') or exit('No direct script access allowed');
   Author: Prodigy Bank
  */
 
-//add admin setting menu item (Settings > Plugins > cPanel Email Accounts)
+//add admin setting menu items (Settings > Plugins > cPanel Email Accounts / Forwarders)
 app_hooks()->add_filter('app_filter_admin_settings_menu', function ($settings_menu) {
     $settings_menu["plugins"][] = array("name" => "cpanel_email_accounts", "url" => "cpanel_email");
+    $settings_menu["plugins"][] = array("name" => "cpanel_email_forwarders", "url" => "cpanel_email/forwarders");
     return $settings_menu;
 });
 

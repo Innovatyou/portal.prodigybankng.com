@@ -157,6 +157,87 @@ class Cpanel_api {
     }
 
     //---------------------------------------------------------------------
+    // Forwarders
+    //
+    // cPanel has no separate "alias" concept - an alias (an address with no
+    // mailbox of its own that just delivers into an existing mailbox) is
+    // created the same way as a forwarder, just pointed at an address that
+    // already has a mailbox instead of an outside address.
+    //---------------------------------------------------------------------
+
+    //list_forwarders requires a domain, unlike list_pops_with_disk
+    function list_forwarders($domain) {
+        $result = $this->_call("Email", "list_forwarders", array("domain" => $domain));
+        if ($result === false) {
+            return false;
+        }
+
+        $data = get_array_value($result, "data");
+        return is_array($data) ? $data : array();
+    }
+
+    //aggregate forwarders across every domain on the account
+    function list_all_forwarders() {
+        $domains = $this->list_domains();
+        if ($domains === false) {
+            return false;
+        }
+
+        $forwarders = array();
+        foreach ($domains as $domain) {
+            $list = $this->list_forwarders($domain);
+            if (is_array($list)) {
+                foreach ($list as $row) {
+                    $source = get_array_value($row, "dest");
+                    if (!$source) {
+                        $source = get_array_value($row, "source");
+                    }
+
+                    $destination = get_array_value($row, "forward");
+                    if (!$destination) {
+                        $destination = get_array_value($row, "fwdemail");
+                    }
+
+                    $type = get_array_value($row, "type");
+                    if (!$type) {
+                        $type = "fwd";
+                    }
+
+                    //skip system-generated rows (blackhole/fail/pipe) - this
+                    //table only manages plain address-to-address forwarding
+                    if ($type !== "fwd" || !$source || !$destination) {
+                        continue;
+                    }
+
+                    $forwarders[] = array(
+                        "domain" => $domain,
+                        "source" => $source,
+                        "destination" => $destination,
+                    );
+                }
+            }
+        }
+
+        return $forwarders;
+    }
+
+    function add_forwarder($domain, $user, $destination) {
+        return $this->_call("Email", "add_forwarder", array(
+            "domain" => $domain,
+            "email" => $user,
+            "fwdopt" => "fwd",
+            "fwdemail" => $destination,
+        ));
+    }
+
+    function delete_forwarder($full_source_email, $destination) {
+        return $this->_call("Email", "delete_forwarder", array(
+            "address" => $full_source_email,
+            "forwarder" => $destination,
+        ));
+    }
+
+    //---------------------------------------------------------------------
     // Internals
     //---------------------------------------------------------------------
 

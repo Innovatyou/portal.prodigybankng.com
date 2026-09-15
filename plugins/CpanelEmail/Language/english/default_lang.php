@@ -22,6 +22,24 @@ $lang["cpanel_email_restrict_login"] = "Restrict Login";
 $lang["cpanel_email_allow_incoming"] = "Allow Incoming Mail";
 $lang["cpanel_email_restrict_incoming"] = "Restrict Incoming Mail";
 
+$lang["cpanel_email_rename"] = "Rename / Change Username";
+$lang["cpanel_email_current_username"] = "Current Address";
+$lang["cpanel_email_new_username"] = "New Username";
+$lang["cpanel_email_keep_old_forwarding"] = "Keep the old address working by forwarding it to the new mailbox";
+$lang["cpanel_email_delete_old_account"] = "Delete the old mailbox after creating the new one (mail already stored in it will be lost)";
+$lang["cpanel_email_rename_help_message"] = "cPanel does not support renaming a mailbox directly. This creates a brand new mailbox under the new username; messages already stored in the old mailbox are not moved automatically.";
+$lang["cpanel_email_rename_same_username"] = "The new username must be different from the current one.";
+$lang["cpanel_email_rename_created"] = "New mailbox created:";
+$lang["cpanel_email_rename_forward_failed"] = "The new mailbox was created, but forwarding the old address failed:";
+$lang["cpanel_email_rename_delete_failed"] = "The new mailbox was created, but deleting the old one failed:";
+
+$lang["cpanel_email_forwarders"] = "Email Forwarders";
+$lang["cpanel_email_add_forwarder"] = "Add Forwarder";
+$lang["cpanel_email_forwarders_help_message"] = "Forward mail from one address to another. To create an email alias, forward the address to an existing mailbox instead of an outside address - no separate mailbox or password is needed for the alias itself.";
+$lang["cpanel_email_forward_from"] = "Forward From";
+$lang["cpanel_email_forward_to"] = "Forward To";
+$lang["cpanel_email_forward_to_placeholder"] = "destination@example.com";
+
 $lang["cpanel_email_username_local_part"] = "Username";
 $lang["cpanel_email_quota_mb"] = "Quota (MB)";
 $lang["cpanel_email_quota_help_message"] = "Maximum mailbox size in megabytes. Leave as 0 for unlimited.";
