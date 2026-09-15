@@ -65,3 +65,54 @@ if (!function_exists('cpanel_email_parse_token')) {
         return $result;
     }
 }
+
+/**
+ * encode a forwarder's source + destination address pair into a url safe
+ * token. A single source address can have several forwarder rows (one per
+ * destination), so both parts are needed to uniquely identify one row.
+ *
+ * @param string $source full "user@domain" address mail is forwarded from
+ * @param string $destination address mail is forwarded to
+ * @return string
+ */
+if (!function_exists('cpanel_email_make_forwarder_token')) {
+
+    function cpanel_email_make_forwarder_token($source, $destination) {
+        $encoded = base64_encode($source . "|" . $destination);
+        return rtrim(strtr($encoded, '+/', '-_'), '=');
+    }
+}
+
+/**
+ * decode a token created by cpanel_email_make_forwarder_token()
+ *
+ * @param string $token
+ * @return stdClass with ->source, ->destination and ->domain
+ */
+if (!function_exists('cpanel_email_parse_forwarder_token')) {
+
+    function cpanel_email_parse_forwarder_token($token) {
+        $result = new stdClass();
+        $result->source = "";
+        $result->destination = "";
+        $result->domain = "";
+
+        $padded = str_pad(strtr($token, '-_', '+/'), strlen($token) % 4 === 0 ? strlen($token) : strlen($token) + (4 - strlen($token) % 4), '=', STR_PAD_RIGHT);
+        $decoded = base64_decode($padded, true);
+
+        if ($decoded === false || strpos($decoded, "|") === false) {
+            return $result;
+        }
+
+        $parts = explode("|", $decoded, 2);
+        $result->source = get_array_value($parts, 0);
+        $result->destination = get_array_value($parts, 1);
+
+        $at_pos = strpos($result->source, "@");
+        if ($at_pos !== false) {
+            $result->domain = substr($result->source, $at_pos + 1);
+        }
+
+        return $result;
+    }
+}

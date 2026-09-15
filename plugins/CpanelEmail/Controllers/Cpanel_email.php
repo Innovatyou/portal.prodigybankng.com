@@ -291,6 +291,228 @@ class Cpanel_email extends Security_Controller {
     }
 
     //--------------------------------------------------------------
+    // Rename / change username
+    //
+    // cPanel has no API to rename a mailbox in place - the local part of
+    // the address is baked into the mail store path. The supported pattern
+    // (per cPanel's own guidance) is to create a new account under the
+    // desired username and, optionally, forward the old address to it so
+    // senders using the old address keep reaching the new mailbox.
+    //--------------------------------------------------------------
+
+    function rename_modal_form($token = "") {
+        $info = cpanel_email_parse_token($token);
+        $view_data['token'] = $token;
+        $view_data['email'] = $info->user . "@" . $info->domain;
+        $view_data['old_user'] = $info->user;
+        $view_data['domain'] = $info->domain;
+
+        return $this->template->view('CpanelEmail\Views\rename_modal_form', $view_data);
+    }
+
+    function save_rename() {
+        $this->validate_submitted_data(array(
+            "token" => "required",
+            "new_user" => "required|regex_match[/^[a-zA-Z0-9._+-]+$/]",
+            "password" => "required|min_length[8]",
+        ));
+
+        $info = cpanel_email_parse_token($this->request->getPost("token"));
+        if (!$info->domain || !$info->user) {
+            echo json_encode(array("success" => false, 'message' => app_lang('error_occurred')));
+            return false;
+        }
+
+        $new_user = $this->request->getPost("new_user");
+        $password = $this->request->getPost("password");
+        $keep_old_forwarding = $this->request->getPost("keep_old_forwarding") ? true : false;
+        $delete_old_account = $this->request->getPost("delete_old_account") ? true : false;
+
+        if (strcasecmp($new_user, $info->user) === 0) {
+            echo json_encode(array("success" => false, 'message' => app_lang('cpanel_email_rename_same_username')));
+            return false;
+        }
+
+        $cpanel = new Cpanel_api();
+
+        //carry over the old mailbox's quota if we can read it (humandiskquota
+        //looks like "250 MB" or "Unlimited"/"None" - the same unit the
+        //add_pop "quota" parameter expects)
+        $quota = 250;
+        $accounts = $cpanel->list_email_accounts();
+        if (is_array($accounts)) {
+            foreach ($accounts as $account) {
+                if (get_array_value($account, "user") === $info->user && get_array_value($account, "domain") === $info->domain) {
+                    $human_quota = get_array_value($account, "humandiskquota");
+                    if ($human_quota && stripos($human_quota, "unlimited") === false && stripos($human_quota, "none") === false && preg_match('/([\d.]+)/', $human_quota, $matches)) {
+                        $quota = (int) $matches[1];
+                    } elseif ($human_quota && (stripos($human_quota, "unlimited") !== false || stripos($human_quota, "none") !== false)) {
+                        $quota = 0;
+                    }
+                    break;
+                }
+            }
+        }
+
+        $result = $cpanel->create_email_account($info->domain, $new_user, $password, $quota);
+        if ($result === false) {
+            echo json_encode(array("success" => false, 'message' => $cpanel->get_last_error()));
+            return false;
+        }
+
+        $new_full_email = $new_user . "@" . $info->domain;
+        $old_full_email = $info->user . "@" . $info->domain;
+        $warnings = array();
+
+        if ($keep_old_forwarding) {
+            $forward_result = $cpanel->add_forwarder($info->domain, $info->user, $new_full_email);
+            if ($forward_result === false) {
+                $warnings[] = app_lang('cpanel_email_rename_forward_failed') . ' ' . $cpanel->get_last_error();
+            }
+        }
+
+        if ($delete_old_account) {
+            $delete_result = $cpanel->delete_email_account($info->domain, $info->user);
+            if ($delete_result === false) {
+                $warnings[] = app_lang('cpanel_email_rename_delete_failed') . ' ' . $cpanel->get_last_error();
+            }
+        }
+
+        $message = app_lang('cpanel_email_rename_created') . ' ' . $new_full_email . '.';
+        if ($warnings) {
+            $message .= ' ' . implode(' ', $warnings);
+        }
+
+        echo json_encode(array(
+            "success" => true,
+            "reload" => true, //table has new/removed rows, simplest to just refresh the list
+            "message" => $message,
+            "old_email" => $old_full_email,
+            "new_email" => $new_full_email,
+        ));
+    }
+
+    //--------------------------------------------------------------
+    // Forwarders & aliases
+    //
+    // An "alias" (an address with no mailbox that just delivers into an
+    // existing mailbox) is created exactly like a forwarder - just point
+    // the destination at an address that already has a mailbox.
+    //--------------------------------------------------------------
+
+    function forwarders() {
+        return $this->template->rander("CpanelEmail\Views\forwarders_index");
+    }
+
+    function forwarders_list_data() {
+        $cpanel = new Cpanel_api();
+
+        if (!$cpanel->is_configured()) {
+            echo json_encode(array("data" => array(), "cpanel_email_not_configured" => true));
+            return false;
+        }
+
+        $forwarders = $cpanel->list_all_forwarders();
+
+        if ($forwarders === false) {
+            echo json_encode(array("data" => array(), "error" => $cpanel->get_last_error()));
+            return false;
+        }
+
+        $result = array();
+        foreach ($forwarders as $forwarder) {
+            $result[] = $this->_make_forwarder_row($forwarder);
+        }
+
+        echo json_encode(array("data" => $result));
+    }
+
+    function forwarder_modal_form() {
+        $cpanel = new Cpanel_api();
+        $view_data['domains'] = $cpanel->is_configured() ? $cpanel->list_domains() : array();
+        $view_data['config_error'] = $cpanel->is_configured() ? "" : app_lang("cpanel_email_not_configured");
+
+        return $this->template->view('CpanelEmail\Views\forwarder_modal_form', $view_data);
+    }
+
+    function save_forwarder() {
+        $this->validate_submitted_data(array(
+            "domain" => "required",
+            "user" => "required|regex_match[/^[a-zA-Z0-9._+-]+$/]",
+            "destination" => "required|valid_email",
+        ));
+
+        $domain = $this->request->getPost("domain");
+        $user = $this->request->getPost("user");
+        $destination = $this->request->getPost("destination");
+
+        $cpanel = new Cpanel_api();
+        $result = $cpanel->add_forwarder($domain, $user, $destination);
+
+        if ($result === false) {
+            echo json_encode(array("success" => false, 'message' => $cpanel->get_last_error()));
+            return false;
+        }
+
+        $source = $user . "@" . $domain;
+        $token = cpanel_email_make_forwarder_token($source, $destination);
+        $row = $this->_make_forwarder_row(array(
+            "domain" => $domain,
+            "source" => $source,
+            "destination" => $destination,
+        ));
+
+        echo json_encode(array("success" => true, "data" => $row, "id" => $token, 'message' => app_lang('record_saved')));
+    }
+
+    function delete_forwarder() {
+        $this->validate_submitted_data(array(
+            "id" => "required"
+        ));
+
+        $info = cpanel_email_parse_forwarder_token($this->request->getPost("id"));
+        if (!$info->source || !$info->destination) {
+            echo json_encode(array("success" => false, 'message' => app_lang('error_occurred')));
+            return false;
+        }
+
+        $cpanel = new Cpanel_api();
+        $result = $cpanel->delete_forwarder($info->source, $info->destination);
+
+        if ($result === false) {
+            echo json_encode(array("success" => false, 'message' => $cpanel->get_last_error()));
+            return false;
+        }
+
+        echo json_encode(array("success" => true, 'message' => app_lang('record_deleted')));
+    }
+
+    private function _make_forwarder_row($forwarder) {
+        $domain = get_array_value($forwarder, "domain");
+        $source = get_array_value($forwarder, "source");
+        $destination = get_array_value($forwarder, "destination");
+
+        $token = cpanel_email_make_forwarder_token($source, $destination);
+
+        $options = array();
+        $options[] = js_anchor("<i data-feather='x' class='icon-16'></i> " . app_lang("delete"), array("title" => app_lang("delete"), "class" => "dropdown-item delete", "data-id" => $token, "data-undo" => "0", "data-action-url" => get_uri("cpanel_email/delete_forwarder"), "data-action" => "delete-confirmation"));
+
+        $action_menu = "<span class='dropdown inline-block'>
+                <button class='btn btn-default dropdown-toggle caret mt0 mb0' type='button' data-bs-toggle='dropdown' aria-expanded='true' data-bs-display='static'>
+                    <i data-feather='tool' class='icon-16'></i>
+                </button>
+                <ul class='dropdown-menu dropdown-menu-end' role='menu'><li role='presentation'>" . implode("</li><li role='presentation'>", $options) . "</li></ul>
+            </span>";
+
+        return array(
+            "<b data-post-id='" . $token . "'>" . $source . "</b>",
+            "<i data-feather='arrow-right' class='icon-16'></i> " . $destination,
+            $domain,
+            $action_menu
+        );
+    }
+
+    //--------------------------------------------------------------
     private function _make_row($account) {
         $domain = get_array_value($account, "domain");
         $user = get_array_value($account, "user");
@@ -321,6 +543,8 @@ class Cpanel_email extends Security_Controller {
         $options[] = modal_anchor(get_uri("cpanel_email/reset_password_modal_form/" . $token), "<i data-feather='key' class='icon-16'></i> " . app_lang("cpanel_email_reset_password"), array("title" => app_lang("cpanel_email_reset_password"), "data-post-id" => $token, "class" => "dropdown-item"));
 
         $options[] = modal_anchor(get_uri("cpanel_email/quota_modal_form/" . $token), "<i data-feather='hard-drive' class='icon-16'></i> " . app_lang("cpanel_email_edit_quota"), array("title" => app_lang("cpanel_email_edit_quota"), "class" => "dropdown-item"));
+
+        $options[] = modal_anchor(get_uri("cpanel_email/rename_modal_form/" . $token), "<i data-feather='edit-2' class='icon-16'></i> " . app_lang("cpanel_email_rename"), array("title" => app_lang("cpanel_email_rename"), "class" => "dropdown-item"));
 
         if ($login_suspended) {
             $options[] = js_anchor("<i data-feather='unlock' class='icon-16'></i> " . app_lang("cpanel_email_allow_login"), array("title" => app_lang("cpanel_email_allow_login"), "class" => "dropdown-item", "data-action" => "update", "data-action-url" => get_uri("cpanel_email/unrestrict_login/" . $token)));
