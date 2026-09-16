@@ -138,7 +138,8 @@ if ($view_type) {
         var projectId = "<?php echo $project_id ? $project_id : 0; ?>";
         var folderId = folder_id ? folder_id : 0;
 
-        appAjaxRequest({
+        $.ajax({
+            timeout: 30000,
             url: "<?php echo get_uri($controller_slag . '/get_folder_items/'); ?>" + folderId + "/" + clientId + "/" + projectId + "/" + viewFrom,
             dataType: "json",
             success: function(result) {
@@ -148,6 +149,11 @@ if ($view_type) {
                     setFolderWindowHeight();
 
                 }
+            },
+            error: function () {
+                appAlert.error(AppLanguage.somethingWentWrong);
+            },
+            complete: function () {
                 appLoader.hide();
             }
         });
@@ -191,13 +197,19 @@ if ($view_type) {
             contextId = 0;
         }
 
-        appAjaxRequest({
+        $.ajax({
+            timeout: 30000,
             url: "<?php echo get_uri($controller_slag . '/get_favourite_folders/'); ?>" + context + "/" + contextId,
             dataType: "json",
             success: function(result) {
                 if (result.success) {
                     $("#favourite-folders").html(result.content);
                 }
+            },
+            error: function () {
+                appAlert.error(AppLanguage.somethingWentWrong);
+            },
+            complete: function () {
                 appLoader.hide();
             }
         });
@@ -405,7 +417,8 @@ if ($view_type) {
                     css: "top:10%; right:40%;"
                 });
 
-                appAjaxRequest({
+                $.ajax({
+                    timeout: 30000,
                     url: url,
                     data: {
                         id: id,
@@ -419,6 +432,11 @@ if ($view_type) {
                             $(fileDetailsContainer).html(result.content);
                             setFolderWindowHeight();
                         }
+                    },
+                    error: function () {
+                        appAlert.error(AppLanguage.somethingWentWrong);
+                    },
+                    complete: function () {
                         appLoader.hide();
                     }
                 });
