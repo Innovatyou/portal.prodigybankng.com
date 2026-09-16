@@ -32,123 +32,147 @@ class Roles extends Security_Controller {
     function permissions($role_id) {
         if ($role_id) {
             validate_numeric_value($role_id);
-            $view_data['model_info'] = $this->Roles_model->get_one($role_id);
+            $stage = 'role';
+            try {
+                $view_data['model_info'] = $this->Roles_model->get_one($role_id);
 
-            $view_data['members_and_teams_dropdown'] = json_encode(get_team_members_and_teams_select2_data_list());
-            $ticket_types_dropdown = array();
-            $ticket_types = $this->Ticket_types_model->get_all_where(array("deleted" => 0))->getResult();
-            foreach ($ticket_types as $type) {
-                $ticket_types_dropdown[] = array("id" => $type->id, "text" => $type->title);
+                if (empty($view_data['model_info']->id) || !empty($view_data['model_info']->deleted)) {
+                    return $this->response->setStatusCode(404)->setJSON(array('success' => false, 'message' => 'This role no longer exists. Refresh the roles list.'));
+                }
+
+                $stage = 'members and teams';
+                $view_data['members_and_teams_dropdown'] = json_encode(get_team_members_and_teams_select2_data_list());
+                $stage = 'ticket types';
+                $ticket_types_dropdown = array();
+                $ticket_types = $this->Ticket_types_model->get_all_where(array("deleted" => 0))->getResult();
+                foreach ($ticket_types as $type) {
+                    $ticket_types_dropdown[] = array("id" => $type->id, "text" => $type->title);
+                }
+                $view_data['ticket_types_dropdown'] = json_encode($ticket_types_dropdown);
+
+                $stage = 'client groups';
+                $client_groups_dropdown = array();
+                $client_groups = $this->Client_groups_model->get_all_where(array("deleted" => 0))->getResult();
+                foreach ($client_groups as $type) {
+                    $client_groups_dropdown[] = array("id" => $type->id, "text" => $type->title);
+                }
+                $view_data['client_groups_dropdown'] = json_encode($client_groups_dropdown);
+
+                $stage = 'AI agents';
+                $AI_agents_model = model("App\Models\AI_agents_model");
+                $ai_agents_dropdown = $AI_agents_model->get_id_and_text_dropdown(array("title"), array("status" => "active"));
+                $view_data["ai_agents_dropdown"] = json_encode($ai_agents_dropdown);
+
+                $stage = 'saved permissions';
+                $permissions = $view_data['model_info']->permissions ? unserialize($view_data['model_info']->permissions, array('allowed_classes' => false)) : array();
+
+                if (!$permissions) {
+                    $permissions = array();
+                }
+
+                $view_data['leave'] = get_array_value($permissions, "leave");
+                $view_data['leave_specific'] = get_array_value($permissions, "leave_specific");
+                $view_data['attendance_specific'] = get_array_value($permissions, "attendance_specific");
+
+                $view_data['attendance'] = get_array_value($permissions, "attendance");
+                $view_data['invoice'] = get_array_value($permissions, "invoice");
+                $view_data['subscription'] = get_array_value($permissions, "subscription");
+                $view_data['estimate'] = get_array_value($permissions, "estimate");
+                $view_data['contract'] = get_array_value($permissions, "contract");
+                $view_data['proposal'] = get_array_value($permissions, "proposal");
+                $view_data['expense'] = get_array_value($permissions, "expense");
+                $view_data['order'] = get_array_value($permissions, "order");
+                $view_data['client'] = get_array_value($permissions, "client");
+                $view_data['lead'] = get_array_value($permissions, "lead");
+
+                $view_data['ticket'] = get_array_value($permissions, "ticket");
+                $view_data['ticket_specific'] = get_array_value($permissions, "ticket_specific");
+                $view_data['client_specific'] = get_array_value($permissions, "client_specific");
+
+                $view_data['announcement'] = get_array_value($permissions, "announcement");
+                $view_data['help_and_knowledge_base'] = get_array_value($permissions, "help_and_knowledge_base");
+
+                $view_data['do_not_show_projects'] = get_array_value($permissions, "do_not_show_projects");
+                $view_data['can_manage_all_projects'] = get_array_value($permissions, "can_manage_all_projects");
+                $view_data['can_create_projects'] = get_array_value($permissions, "can_create_projects");
+                $view_data['can_edit_projects'] = get_array_value($permissions, "can_edit_projects");
+                $view_data['can_edit_only_own_created_projects'] = get_array_value($permissions, "can_edit_only_own_created_projects");
+                $view_data['can_delete_only_own_created_projects'] = get_array_value($permissions, "can_delete_only_own_created_projects");
+                $view_data['can_delete_projects'] = get_array_value($permissions, "can_delete_projects");
+
+                $view_data['can_add_remove_project_members'] = get_array_value($permissions, "can_add_remove_project_members");
+
+                $view_data['can_create_tasks'] = get_array_value($permissions, "can_create_tasks");
+                $view_data['can_edit_tasks'] = get_array_value($permissions, "can_edit_tasks");
+                $view_data['can_delete_tasks'] = get_array_value($permissions, "can_delete_tasks");
+                $view_data['can_comment_on_tasks'] = get_array_value($permissions, "can_comment_on_tasks");
+                $view_data['show_assigned_tasks_only'] = get_array_value($permissions, "show_assigned_tasks_only");
+                $view_data['can_update_only_assigned_tasks_status'] = get_array_value($permissions, "can_update_only_assigned_tasks_status");
+
+                $view_data['can_create_milestones'] = get_array_value($permissions, "can_create_milestones");
+                $view_data['can_edit_milestones'] = get_array_value($permissions, "can_edit_milestones");
+                $view_data['can_delete_milestones'] = get_array_value($permissions, "can_delete_milestones");
+
+                $view_data['can_delete_files'] = get_array_value($permissions, "can_delete_files");
+
+                $view_data['can_view_team_members_contact_info'] = get_array_value($permissions, "can_view_team_members_contact_info");
+                $view_data['can_view_team_members_social_links'] = get_array_value($permissions, "can_view_team_members_social_links");
+                $view_data['team_member_update_permission'] = get_array_value($permissions, "team_member_update_permission");
+                $view_data['team_member_update_permission_specific'] = get_array_value($permissions, "team_member_update_permission_specific");
+
+                $view_data['timesheet_manage_permission'] = get_array_value($permissions, "timesheet_manage_permission");
+                $view_data['timesheet_manage_permission_specific'] = get_array_value($permissions, "timesheet_manage_permission_specific");
+
+                $view_data['disable_event_sharing'] = get_array_value($permissions, "disable_event_sharing");
+
+                $view_data['hide_team_members_list'] = get_array_value($permissions, "hide_team_members_list");
+                $view_data['hide_team_members_list_from_dropdowns'] = get_array_value($permissions, "hide_team_members_list_from_dropdowns");
+
+                $view_data['can_delete_leave_application'] = get_array_value($permissions, "can_delete_leave_application");
+
+                $view_data['message_permission'] = get_array_value($permissions, "message_permission");
+                $view_data['message_permission_specific'] = get_array_value($permissions, "message_permission_specific");
+
+                $view_data['job_info_manage_permission'] = get_array_value($permissions, "job_info_manage_permission");
+
+                $view_data['can_manage_all_kinds_of_settings'] = get_array_value($permissions, "can_manage_all_kinds_of_settings");
+                $view_data['can_manage_user_role_and_permissions'] = get_array_value($permissions, "can_manage_user_role_and_permissions");
+                $view_data['can_add_or_invite_new_team_members'] = get_array_value($permissions, "can_add_or_invite_new_team_members");
+                $view_data['can_activate_deactivate_team_members'] = get_array_value($permissions, "can_activate_deactivate_team_members");
+                $view_data['can_delete_team_members'] = get_array_value($permissions, "can_delete_team_members");
+
+                $view_data['timeline_permission'] = get_array_value($permissions, "timeline_permission");
+                $view_data['timeline_permission_specific'] = get_array_value($permissions, "timeline_permission_specific");
+
+                $view_data['client_feedback_access_permission'] = get_array_value($permissions, "client_feedback_access_permission");
+
+                $view_data['team_members_note_manage_permission'] = get_array_value($permissions, "team_members_note_manage_permission");
+
+                $view_data['can_upload_and_edit_files'] = get_array_value($permissions, "can_upload_and_edit_files");
+                $view_data['can_view_files'] = get_array_value($permissions, "can_view_files");
+                $view_data['can_comment_on_projects'] = get_array_value($permissions, "can_comment_on_projects");
+
+                $view_data['can_access_quick_assistant'] = get_array_value($permissions, "can_access_quick_assistant");
+                $view_data['can_access_ai_chatbox'] = get_array_value($permissions, "can_access_ai_chatbox");
+                $view_data['accessible_ai_agents_permission'] = get_array_value($permissions, "accessible_ai_agents_permission");
+                $view_data['accessible_ai_agents_permission_specific'] = get_array_value($permissions, "accessible_ai_agents_permission_specific");
+
+                $view_data['permissions'] = $permissions;
+
+                $stage = 'permissions form and plugin extensions';
+                return $this->template->view("roles/permissions", $view_data);
+            } catch (\Throwable $exception) {
+                $reference = bin2hex(random_bytes(6));
+                log_message('error', 'Role permissions failure {reference}: role={role}, stage={stage}, type={type}, file={file}, line={line}', array(
+                    'reference' => $reference, 'role' => $role_id, 'stage' => $stage,
+                    'type' => get_class($exception), 'file' => $exception->getFile(), 'line' => $exception->getLine()
+                ));
+                // Keep the editor closed on failure; a partial form could overwrite permissions.
+                return $this->response->setStatusCode(500)->setJSON(array(
+                    'success' => false,
+                    'message' => 'Unable to open role permissions while loading ' . $stage . '. Reference: ' . $reference
+                ));
             }
-            $view_data['ticket_types_dropdown'] = json_encode($ticket_types_dropdown);
-
-            $client_groups_dropdown = array();
-            $client_groups = $this->Client_groups_model->get_all_where(array("deleted" => 0))->getResult();
-            foreach ($client_groups as $type) {
-                $client_groups_dropdown[] = array("id" => $type->id, "text" => $type->title);
-            }
-            $view_data['client_groups_dropdown'] = json_encode($client_groups_dropdown);
-
-            $AI_agents_model = model("App\Models\AI_agents_model");
-            $ai_agents_dropdown = $AI_agents_model->get_id_and_text_dropdown(array("title"), array("status" => "active"));
-            $view_data["ai_agents_dropdown"] = json_encode($ai_agents_dropdown);
-
-            $permissions = $view_data['model_info']->permissions ? unserialize($view_data['model_info']->permissions) : "";
-
-            if (!$permissions) {
-                $permissions = array();
-            }
-
-            $view_data['leave'] = get_array_value($permissions, "leave");
-            $view_data['leave_specific'] = get_array_value($permissions, "leave_specific");
-            $view_data['attendance_specific'] = get_array_value($permissions, "attendance_specific");
-
-            $view_data['attendance'] = get_array_value($permissions, "attendance");
-            $view_data['invoice'] = get_array_value($permissions, "invoice");
-            $view_data['subscription'] = get_array_value($permissions, "subscription");
-            $view_data['estimate'] = get_array_value($permissions, "estimate");
-            $view_data['contract'] = get_array_value($permissions, "contract");
-            $view_data['proposal'] = get_array_value($permissions, "proposal");
-            $view_data['expense'] = get_array_value($permissions, "expense");
-            $view_data['order'] = get_array_value($permissions, "order");
-            $view_data['client'] = get_array_value($permissions, "client");
-            $view_data['lead'] = get_array_value($permissions, "lead");
-
-            $view_data['ticket'] = get_array_value($permissions, "ticket");
-            $view_data['ticket_specific'] = get_array_value($permissions, "ticket_specific");
-            $view_data['client_specific'] = get_array_value($permissions, "client_specific");
-
-            $view_data['announcement'] = get_array_value($permissions, "announcement");
-            $view_data['help_and_knowledge_base'] = get_array_value($permissions, "help_and_knowledge_base");
-
-            $view_data['do_not_show_projects'] = get_array_value($permissions, "do_not_show_projects");
-            $view_data['can_manage_all_projects'] = get_array_value($permissions, "can_manage_all_projects");
-            $view_data['can_create_projects'] = get_array_value($permissions, "can_create_projects");
-            $view_data['can_edit_projects'] = get_array_value($permissions, "can_edit_projects");
-            $view_data['can_edit_only_own_created_projects'] = get_array_value($permissions, "can_edit_only_own_created_projects");
-            $view_data['can_delete_only_own_created_projects'] = get_array_value($permissions, "can_delete_only_own_created_projects");
-            $view_data['can_delete_projects'] = get_array_value($permissions, "can_delete_projects");
-
-            $view_data['can_add_remove_project_members'] = get_array_value($permissions, "can_add_remove_project_members");
-
-            $view_data['can_create_tasks'] = get_array_value($permissions, "can_create_tasks");
-            $view_data['can_edit_tasks'] = get_array_value($permissions, "can_edit_tasks");
-            $view_data['can_delete_tasks'] = get_array_value($permissions, "can_delete_tasks");
-            $view_data['can_comment_on_tasks'] = get_array_value($permissions, "can_comment_on_tasks");
-            $view_data['show_assigned_tasks_only'] = get_array_value($permissions, "show_assigned_tasks_only");
-            $view_data['can_update_only_assigned_tasks_status'] = get_array_value($permissions, "can_update_only_assigned_tasks_status");
-
-            $view_data['can_create_milestones'] = get_array_value($permissions, "can_create_milestones");
-            $view_data['can_edit_milestones'] = get_array_value($permissions, "can_edit_milestones");
-            $view_data['can_delete_milestones'] = get_array_value($permissions, "can_delete_milestones");
-
-            $view_data['can_delete_files'] = get_array_value($permissions, "can_delete_files");
-
-            $view_data['can_view_team_members_contact_info'] = get_array_value($permissions, "can_view_team_members_contact_info");
-            $view_data['can_view_team_members_social_links'] = get_array_value($permissions, "can_view_team_members_social_links");
-            $view_data['team_member_update_permission'] = get_array_value($permissions, "team_member_update_permission");
-            $view_data['team_member_update_permission_specific'] = get_array_value($permissions, "team_member_update_permission_specific");
-
-            $view_data['timesheet_manage_permission'] = get_array_value($permissions, "timesheet_manage_permission");
-            $view_data['timesheet_manage_permission_specific'] = get_array_value($permissions, "timesheet_manage_permission_specific");
-
-            $view_data['disable_event_sharing'] = get_array_value($permissions, "disable_event_sharing");
-
-            $view_data['hide_team_members_list'] = get_array_value($permissions, "hide_team_members_list");
-            $view_data['hide_team_members_list_from_dropdowns'] = get_array_value($permissions, "hide_team_members_list_from_dropdowns");
-
-            $view_data['can_delete_leave_application'] = get_array_value($permissions, "can_delete_leave_application");
-
-            $view_data['message_permission'] = get_array_value($permissions, "message_permission");
-            $view_data['message_permission_specific'] = get_array_value($permissions, "message_permission_specific");
-
-            $view_data['job_info_manage_permission'] = get_array_value($permissions, "job_info_manage_permission");
-
-            $view_data['can_manage_all_kinds_of_settings'] = get_array_value($permissions, "can_manage_all_kinds_of_settings");
-            $view_data['can_manage_user_role_and_permissions'] = get_array_value($permissions, "can_manage_user_role_and_permissions");
-            $view_data['can_add_or_invite_new_team_members'] = get_array_value($permissions, "can_add_or_invite_new_team_members");
-            $view_data['can_activate_deactivate_team_members'] = get_array_value($permissions, "can_activate_deactivate_team_members");
-            $view_data['can_delete_team_members'] = get_array_value($permissions, "can_delete_team_members");
-
-            $view_data['timeline_permission'] = get_array_value($permissions, "timeline_permission");
-            $view_data['timeline_permission_specific'] = get_array_value($permissions, "timeline_permission_specific");
-
-            $view_data['client_feedback_access_permission'] = get_array_value($permissions, "client_feedback_access_permission");
-
-            $view_data['team_members_note_manage_permission'] = get_array_value($permissions, "team_members_note_manage_permission");
-
-            $view_data['can_upload_and_edit_files'] = get_array_value($permissions, "can_upload_and_edit_files");
-            $view_data['can_view_files'] = get_array_value($permissions, "can_view_files");
-            $view_data['can_comment_on_projects'] = get_array_value($permissions, "can_comment_on_projects");
-
-            $view_data['can_access_quick_assistant'] = get_array_value($permissions, "can_access_quick_assistant");
-            $view_data['can_access_ai_chatbox'] = get_array_value($permissions, "can_access_ai_chatbox");
-            $view_data['accessible_ai_agents_permission'] = get_array_value($permissions, "accessible_ai_agents_permission");
-            $view_data['accessible_ai_agents_permission_specific'] = get_array_value($permissions, "accessible_ai_agents_permission_specific");
-
-            $view_data['permissions'] = $permissions;
-
-            return $this->template->view("roles/permissions", $view_data);
         }
     }
 

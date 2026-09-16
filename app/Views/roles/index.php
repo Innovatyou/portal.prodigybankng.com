@@ -76,9 +76,14 @@
                         success: function (result) {
                             $("#role-details-section").html(result);
                         },
-                        error: function () {
+                        error: function (xhr) {
                             $selectedRow.removeClass("active");
-                            appAlert.error(AppLanguage.somethingWentWrong);
+                            var message = xhr.responseJSON && xhr.responseJSON.message
+                                ? xhr.responseJSON.message : AppLanguage.somethingWentWrong;
+                            $("#role-details-section").empty().append(
+                                $("<div class='alert alert-danger' role='alert'></div>").text(message)
+                            );
+                            appAlert.error(message);
                         },
                         complete: function () {
                             appLoader.hide();
