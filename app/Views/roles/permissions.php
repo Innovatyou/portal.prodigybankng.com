@@ -1318,6 +1318,11 @@
 
                     <div>
                         <label><?php echo app_lang("accessible_ai_agents"); ?>: </label>
+                        <?php if (!$ai_agents_available) { ?>
+                            <p class="text-muted">AI agents are unavailable. Existing agent access will be kept when you save.</p>
+                            <input type="hidden" name="accessible_ai_agents_permission" value="<?php echo esc($accessible_ai_agents_permission ?? ''); ?>" />
+                            <input type="hidden" name="accessible_ai_agents_permission_specific" value="<?php echo esc($accessible_ai_agents_permission_specific ?? ''); ?>" />
+                        <?php } else { ?>
                         <div class="ml15">
                             <div>
                                 <?php
@@ -1349,6 +1354,7 @@
                                 </div>
                             </div>
                         </div>
+                        <?php } ?>
                     </div>
 
                 </li>
@@ -1398,10 +1404,12 @@
             data: <?php echo ($ticket_types_dropdown); ?>
         });
 
+        <?php if ($ai_agents_available) { ?>
         $("#accessible_ai_agents_permission_specific_dropdown").appDropdown({
             list_data: <?php echo ($ai_agents_dropdown); ?>,
             multiple: true
         });
+        <?php } ?>
 
         $('[data-bs-toggle="tooltip"]').tooltip();
 
