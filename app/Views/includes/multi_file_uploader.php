@@ -98,7 +98,7 @@ if (!isset($validation_url)) {
                 }
 
                 //validate the file?
-                appAjaxRequest({
+                $.ajax({
                     url: "<?php echo $validation_url; ?>",
                     data: {
                         file_name: file.name,
