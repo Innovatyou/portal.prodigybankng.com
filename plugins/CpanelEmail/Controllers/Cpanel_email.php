@@ -11,7 +11,9 @@ class Cpanel_email extends Security_Controller {
 
     function __construct() {
         parent::__construct();
-        $this->access_only_admin_or_settings_admin();
+        if (!\CpanelEmail\Libraries\Cpanel_email_permissions::can_manage($this->login_user)) {
+            app_redirect('forbidden');
+        }
         $this->Cpanel_email_settings_model = new \CpanelEmail\Models\Cpanel_email_settings_model();
     }
 
@@ -24,10 +26,12 @@ class Cpanel_email extends Security_Controller {
     //--------------------------------------------------------------
 
     function settings_modal_form() {
+        $this->access_only_admin_or_settings_admin();
         return $this->template->view('CpanelEmail\Views\settings_modal_form');
     }
 
     function save_settings() {
+        $this->access_only_admin_or_settings_admin();
         $this->validate_submitted_data(array(
             "cpanel_email_host" => "required",
             "cpanel_email_username" => "required",
@@ -61,6 +65,7 @@ class Cpanel_email extends Security_Controller {
 
     //test the connection, either with the saved settings or with the values currently typed in the settings form
     function test_connection() {
+        $this->access_only_admin_or_settings_admin();
         $token = $this->request->getPost("cpanel_email_api_token");
         if ($token === "******" || $token === null) {
             $token = decode_password(get_cpanel_email_setting("cpanel_email_api_token"), "cpanel_email_api_token");
