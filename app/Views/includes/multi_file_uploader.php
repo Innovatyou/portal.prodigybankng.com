@@ -94,6 +94,7 @@ if (!isset($validation_url)) {
                 if (file.name.length > 200) {
                     done("Filename is too long.");
                     $(file.previewTemplate).find(".description-field").remove();
+                    return;
                 }
 
                 //validate the file?
@@ -106,6 +107,7 @@ if (!isset($validation_url)) {
                     cache: false,
                     type: 'POST',
                     dataType: "json",
+                    timeout: 30000,
                     success: function(response) {
                         if (response.success) {
                             fileSerial++;
@@ -118,6 +120,10 @@ if (!isset($validation_url)) {
                             $(file.previewTemplate).find("input").remove();
                             done(response.message);
                         }
+                    },
+                    error: function() {
+                        $(file.previewTemplate).find("input").remove();
+                        done(AppLanguage.somethingWentWrong);
                     }
                 });
             },
