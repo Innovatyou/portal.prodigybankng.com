@@ -7,6 +7,15 @@
 /files/
 /plugins/*/files/
 
+# Rewritten at runtime by save_plugins_config() every time an admin
+# activates/deactivates a plugin from Settings > Plugins. Tracking this in
+# git meant every deploy (cp -R * in .cpanel.yml) clobbered the live
+# server's actual plugin activation state back to whatever was last
+# committed - e.g. silently "deactivating" CpanelEmail (404s on all its
+# routes, vanished from the left menu) even though the DB still showed it
+# as Active. Leave it alone on the server; don't track it here.
+/app/Config/activated_plugins.json
+
 # Production data export (contains real customer/financial data - never commit)
 /admintsl_securitiesportaldb.sql
 
