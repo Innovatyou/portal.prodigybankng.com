@@ -11,13 +11,23 @@ defined('PLUGINPATH') or exit('No direct script access allowed');
  */
 
 use App\Controllers\Security_Controller;
+use CpanelEmail\Libraries\Cpanel_email_permissions;
+
+app_hooks()->add_action('app_hook_role_permissions_extension', function () {
+    echo view('CpanelEmail\Views\roles\permissions');
+});
+
+app_hooks()->add_filter('app_filter_role_permissions_save_data', function ($permissions) {
+    $permissions['can_manage_cpanel_email'] = service('request')->getPost('can_manage_cpanel_email') ? '1' : '0';
+    return $permissions;
+});
 
 //add "Email" to the sidebar (Settings > Left Menu > available items), visible only
-//to admins/settings-admins since the plugin's controllers are restricted to them
+//to staff with cPanel email management access.
 app_hooks()->add_filter('app_filter_staff_left_menu', function ($sidebar_menu) {
     $instance = new Security_Controller();
 
-    if ($instance->login_user->is_admin || get_array_value($instance->login_user->permissions, "can_manage_all_kinds_of_settings")) {
+    if (Cpanel_email_permissions::can_manage($instance->login_user)) {
         $sidebar_menu["cpanel_email"] = array(
             "name" => "cpanel_email",
             "url" => "cpanel_email",

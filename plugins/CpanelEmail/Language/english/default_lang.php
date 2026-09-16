@@ -5,6 +5,7 @@ $lang["domain"] = "Domain";
 $lang["unlimited"] = "Unlimited";
 
 $lang["cpanel_email"] = "Email";
+$lang["can_manage_cpanel_email"] = "Manage cPanel email accounts and forwarders";
 
 $lang["cpanel_email_accounts"] = "cPanel Email Accounts";
 $lang["cpanel_email_connection_settings"] = "Connection Settings";

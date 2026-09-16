@@ -12,7 +12,9 @@
                 <div class="page-title clearfix">
                     <h4 class="mt15"><?php echo app_lang('cpanel_email_accounts'); ?></h4>
                     <div class="title-button-group">
+                        <?php if ($login_user->is_admin || get_array_value($login_user->permissions, 'can_manage_all_kinds_of_settings')) { ?>
                         <?php echo modal_anchor(get_uri("cpanel_email/settings_modal_form"), "<i data-feather='settings' class='icon-16'></i> " . app_lang('cpanel_email_connection_settings'), array("class" => "btn btn-default", "title" => app_lang('cpanel_email_connection_settings'))); ?>
+                        <?php } ?>
                         <?php echo modal_anchor(get_uri("cpanel_email/modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('cpanel_email_add_account'), array("class" => "btn btn-default", "title" => app_lang('cpanel_email_add_account'))); ?>
                     </div>
                 </div>
