@@ -34,7 +34,7 @@ foreach (['empty', 'saved', 'missing', 'deleted', 'members', 'ticket', 'client',
             return (object)['id' => $GLOBALS['mode'] === 'missing' ? '' : $id,
                 'deleted' => $GLOBALS['mode'] === 'deleted',
                 'permissions' => match ($GLOBALS['mode']) {
-                    'saved' => serialize(['can_create_tasks' => '1', 'operations_approve' => '1']),
+                    'saved', 'ai' => serialize(['can_create_tasks' => '1', 'operations_approve' => '1', 'accessible_ai_agents_permission' => 'specific', 'accessible_ai_agents_permission_specific' => '2,7']),
                     'malformed' => 'broken', 'object' => serialize((object)['x' => 1]), default => ''
                 }];
         }
@@ -63,11 +63,16 @@ foreach (['empty', 'saved', 'missing', 'deleted', 'members', 'ticket', 'client',
         function setJSON($body) { $this->body = $body; return $this; }
     };
     $result = $handler->permissions(7);
-    if (in_array($mode, ['empty', 'saved'], true)) {
+    if (in_array($mode, ['empty', 'saved', 'ai'], true)) {
         check($result === 'editor', 'Must render valid role');
         if ($mode === 'saved') {
             check($handler->template->data['can_create_tasks'] === '1', 'Core permission preserved');
             check($handler->template->data['permissions']['operations_approve'] === '1', 'Plugin permission preserved');
+        }
+        check($handler->template->data['ai_agents_available'] === ($mode !== 'ai'), 'AI list availability');
+        if ($mode === 'ai') {
+            check($handler->template->data['accessible_ai_agents_permission'] === 'specific', 'Restricted agent access preserved');
+            check($handler->template->data['accessible_ai_agents_permission_specific'] === '2,7', 'Selected agents preserved');
         }
     } else {
         check($result->status === (in_array($mode, ['missing', 'deleted'], true) ? 404 : 500), 'Expected failure status');

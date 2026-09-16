@@ -59,8 +59,17 @@ class Roles extends Security_Controller {
                 $view_data['client_groups_dropdown'] = json_encode($client_groups_dropdown);
 
                 $stage = 'AI agents';
-                $AI_agents_model = model("App\Models\AI_agents_model");
-                $ai_agents_dropdown = $AI_agents_model->get_id_and_text_dropdown(array("title"), array("status" => "active"));
+                $view_data['ai_agents_available'] = true;
+                $ai_agents_dropdown = array();
+                try {
+                    $AI_agents_model = model("App\Models\AI_agents_model");
+                    $ai_agents_dropdown = $AI_agents_model->get_id_and_text_dropdown(array("title"), array("status" => "active"));
+                } catch (\Throwable $exception) {
+                    $view_data['ai_agents_available'] = false;
+                    log_message('error', 'Role AI-agent list unavailable: type={type}, file={file}, line={line}', array(
+                        'type' => get_class($exception), 'file' => $exception->getFile(), 'line' => $exception->getLine()
+                    ));
+                }
                 $view_data["ai_agents_dropdown"] = json_encode($ai_agents_dropdown);
 
                 $stage = 'saved permissions';
