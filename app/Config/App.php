@@ -273,6 +273,9 @@ class App extends BaseConfig {
     public $timeline_file_path = 'files/timeline_files/';
     public $project_file_path = 'files/project_files/';
     public $system_file_path = 'files/system/';
+    //used when the accepted_file_formats setting was never saved: this install's database wasn't seeded
+    //with RISE's default settings, and an empty list rejects every upload (e.g. profile images)
+    public $accepted_file_formats = 'jpg,jpeg,png,doc,xlsx,txt,pdf,zip,webm,mp4,mp3,docx,ppt';
     public $check_notification_after_every = "60"; //Check notification after every 60 seconds. Recommanded: don't set this value less than 20.
 
 }

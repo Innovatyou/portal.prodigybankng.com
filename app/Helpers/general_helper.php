@@ -74,6 +74,9 @@ if (!function_exists('get_avatar')) {
             $file = @unserialize($image);
             if (is_array($file)) {
                 return get_source_url_of_file($file, get_setting("profile_image_path") . "/", "thumbnail");
+            } else if ($image === serialize(false)) {
+                //a failed upload was saved as a serialized false
+                return base_url("assets/images/avatar.jpg");
             } else {
                 return base_url(get_setting("profile_image_path")) . "/" . $image;
             }

@@ -931,7 +931,12 @@ class Team_members extends Security_Controller {
         $profile_image = str_replace("~", ":", $this->request->getPost("profile_image"));
 
         if ($profile_image) {
-            $profile_image = serialize(move_temp_file("avatar.png", get_setting("profile_image_path"), "", $profile_image));
+            $profile_image_data = move_temp_file("avatar.png", get_setting("profile_image_path"), "", $profile_image);
+            if (!$profile_image_data) {
+                echo json_encode(array("success" => false, 'message' => app_lang('invalid_file_type')));
+                exit();
+            }
+            $profile_image = serialize($profile_image_data);
 
             //delete old file
             delete_app_files(get_setting("profile_image_path"), array(@unserialize($user_info->image)));
@@ -953,7 +958,12 @@ class Team_members extends Security_Controller {
                     exit();
                 }
 
-                $profile_image = serialize(move_temp_file("avatar.png", get_setting("profile_image_path"), "", $image_file_name, "", "", false, $image_file_size));
+                $profile_image_data = move_temp_file("avatar.png", get_setting("profile_image_path"), "", $image_file_name, "", "", false, $image_file_size);
+                if (!$profile_image_data) {
+                    echo json_encode(array("success" => false, 'message' => app_lang('invalid_file_type')));
+                    exit();
+                }
+                $profile_image = serialize($profile_image_data);
 
                 //delete old file
                 if ($user_info->image) {
