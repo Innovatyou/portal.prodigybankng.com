@@ -55,7 +55,7 @@ class File_manager extends Security_Controller {
 
     //used by App_folders
     private function _can_upload_file($folder_id = 0, $context_id = 0) {
-        if ($this->login_user->is_admin) {
+        if ($this->login_user->is_admin || $this->_has_file_manager_role_permission("can_upload_files")) {
             return true;
         } else if ($folder_id) {
 
@@ -68,7 +68,7 @@ class File_manager extends Security_Controller {
     }
 
     private function _can_view_files_in_folder($folder_id = 0) {
-        if ($this->login_user->is_admin) {
+        if ($this->login_user->is_admin || $this->_can_view_all_file_manager_files()) {
             return true;
         } else if ($folder_id) {
             $folder_info = $this->get_folder_details($folder_id);
@@ -155,7 +155,7 @@ class File_manager extends Security_Controller {
         $options = array(
             "folder_id" => $folder_id,
             "context_type" => $context_type,
-            "is_admin" => $this->login_user->is_admin
+            "is_admin" => $this->login_user->is_admin || $this->_can_view_all_file_manager_files() //root files are shown to these users only
         );
 
         $options["client_id"] = $context_id;
@@ -213,7 +213,7 @@ class File_manager extends Security_Controller {
     private function _delete_file($id) {
         $info = $this->General_files_model->get_one($id);
 
-        if (!$info || !$this->_can_manage_folder($info->folder_id)) {
+        if (!$info || !($this->_has_file_manager_role_permission("can_delete_files") || $this->_can_manage_folder($info->folder_id))) {
             return false;
         }
 
@@ -250,6 +250,10 @@ class File_manager extends Security_Controller {
 
     //used by App_folders
     private function _can_create_folder($parent_folder_id = 0, $context_id = 0) {
+        if ($this->_has_file_manager_role_permission("can_add_folders")) {
+            return true;
+        }
+
         return $this->_can_manage_folder($parent_folder_id, $context_id);
     }
 }

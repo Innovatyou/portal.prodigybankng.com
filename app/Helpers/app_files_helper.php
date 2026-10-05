@@ -318,7 +318,10 @@ if (!function_exists('move_temp_file')) {
                     die('Failed to create file folders.');
                 }
                 //create a index.html file inside the folder
-                copy(getcwd() . "/" . get_setting("system_file_path") . "index.html", $target_path . "index.html");
+                $index_file = getcwd() . "/" . get_setting("system_file_path") . "index.html";
+                if (is_file($index_file)) {
+                    copy($index_file, $target_path . "index.html");
+                }
             }
 
             if ($file_content) {

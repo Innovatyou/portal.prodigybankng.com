@@ -208,6 +208,21 @@
                     </li>
                 <?php } ?>
 
+                <?php if (get_setting("module_file_manager")) { ?>
+                    <li>
+                        <span data-feather="key" class="icon-14 ml-20"></span>
+                        <h5><?php echo app_lang("set_file_manager_permissions"); ?>:</h5>
+                        <?php foreach (array("file_manager_can_view_files", "file_manager_can_add_folders", "file_manager_can_upload_files", "file_manager_can_delete_files") as $file_manager_permission) { ?>
+                            <div>
+                                <?php
+                                echo form_checkbox($file_manager_permission, "1", $$file_manager_permission ? true : false, "id='$file_manager_permission' class='form-check-input'");
+                                ?>
+                                <label for="<?php echo $file_manager_permission; ?>"><?php echo app_lang($file_manager_permission); ?></label>
+                            </div>
+                        <?php } ?>
+                    </li>
+                <?php } ?>
+
                 <li>
                     <span data-feather="key" class="icon-14 ml-20"></span>
                     <h5><?php echo app_lang("set_team_members_permission"); ?>:</h5>

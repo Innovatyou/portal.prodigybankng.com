@@ -307,8 +307,14 @@ if ($view_type) {
                 var moveMenu = '',
                     deleteMenu = '';
 
-                if (hasWritePermission && "<?php echo $login_user->user_type ?>" == "staff") {
+                var $filesList = parentFolderItem.closest('.files-and-folders-list');
+                var isStaff = "<?php echo $login_user->user_type ?>" == "staff";
+
+                if ($filesList.data('has_file_move_permission') && isStaff) {
                     moveMenu = '<?php echo modal_anchor(get_uri($controller_slag . '/move_folder_or_file_modal_form'), '<i data-feather="corner-down-right" class="icon-16 mr10"></i>' . app_lang('move'), array('title' => app_lang('move_file'), 'class' => 'dropdown-item', 'data-post-file_id' => '')); ?>';
+                }
+
+                if ($filesList.data('has_file_delete_permission') && isStaff) {
                     deleteMenu = '<?php echo js_anchor('<i data-feather="trash" class="icon-16 mr10"></i>' . app_lang('delete'), array('title' => app_lang('delete'), 'class' => 'dropdown-item item-delete-button', 'data-id' => '', 'data-action-url' => get_uri($controller_slag . '/delete_folder_file'), 'data-action' => 'delete-confirmation', 'data-reload-on-success' => true)); ?>';
                 }
 
