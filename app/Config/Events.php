@@ -71,7 +71,8 @@ Events::on('pre_system', static function (): void {
 });
 
 function load_plugin_indexes() {
-    $plugins = file_get_contents(APPPATH . "Config/activated_plugins.json");
+    $plugins_file = APPPATH . "Config/activated_plugins.json";
+    $plugins = is_file($plugins_file) ? file_get_contents($plugins_file) : "";
     $plugins = @json_decode($plugins);
 
     if (!($plugins && is_array($plugins) && count($plugins))) {
