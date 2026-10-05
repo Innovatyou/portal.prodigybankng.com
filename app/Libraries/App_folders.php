@@ -90,6 +90,26 @@ trait App_folders {
         return array_unique($all_shareable_options);
     }
 
+    //file manager rights given to a team member's role (Settings > Roles), on top of the folder sharing
+    private function _has_file_manager_role_permission($permission) {
+        if ($this->login_user->user_type != "staff") {
+            return false;
+        }
+
+        return get_array_value($this->login_user->permissions, "file_manager_" . $permission) == "1";
+    }
+
+    //any file manager role right lets the team member see all file manager folders and files
+    private function _can_view_all_file_manager_files() {
+        foreach (array("can_view_files", "can_add_folders", "can_upload_files", "can_delete_files") as $permission) {
+            if ($this->_has_file_manager_role_permission($permission)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function init_permissions_value_memory() {
 
         $team_members_list = array();
@@ -344,7 +364,7 @@ trait App_folders {
         $this->init();
         $model_info = $this->Folders_model->get_one($id);
 
-        if (!$model_info || !$this->_can_create_folder($model_info->id, $model_info->context_id)) {
+        if (!$model_info || !$this->_can_manage_folder($model_info->id, $model_info->context_id)) {
             app_redirect("forbidden");
         }
 
@@ -608,7 +628,7 @@ trait App_folders {
         );
 
         $model_info = $this->Folders_model->get_one($id);
-        if (!$model_info || !$this->_can_create_folder($model_info->id, $model_info->context_id)) {
+        if (!$model_info || !$this->_can_manage_folder($model_info->id, $model_info->context_id)) {
             app_redirect("forbidden");
         }
 
@@ -667,6 +687,8 @@ trait App_folders {
             if (!$folder_id) {
                 $options["show_root_folders_only"] = true;
             }
+        } else if (!$client_id && !$project_id && !$folder_id && $this->_can_view_all_file_manager_files()) {
+            $options["show_root_folders_only"] = true;
         }
 
 
@@ -703,6 +725,13 @@ trait App_folders {
 
         if ($this->_can_manage_folder($folder_primary_id, $context_id)) {
             $data["can_manage_folder_access_permissions"] = true;
+        }
+
+        $data["has_file_move_permission"] = $data["has_write_permission"];
+        $data["has_file_delete_permission"] = $data["has_write_permission"];
+        if ($options["context"] == "file_manager") {
+            $data["has_file_move_permission"] = $data["can_manage_folder_access_permissions"];
+            $data["has_file_delete_permission"] = $data["can_manage_folder_access_permissions"] || $this->_has_file_manager_role_permission("can_delete_files");
         }
 
         // if ($data["has_full_access"] || ($folder_info && $folder_info->actual_permission_rank >= 6) || ($folder_info && $folder_info->context == "client" && ($this->login_user->user_type == "client" && $this->login_user->client_id == $folder_info->context_id) || $data["can_edit_clients"])) {
@@ -904,6 +933,12 @@ trait App_folders {
                 } else {
                     $options["member_id"] = $this->login_user->id;
                     $options["team_ids"] = $this->login_user->team_ids;
+
+                    if ($this->_can_view_all_file_manager_files()) {
+                        //see every folder, but keep the folder permission ranks from the sharing
+                        $options["has_full_access"] = true;
+                        $options["has_view_only_full_access"] = true;
+                    }
                 }
             }
         } else if ($this->login_user->user_type == "client") {

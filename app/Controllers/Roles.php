@@ -159,6 +159,11 @@ class Roles extends Security_Controller {
 
                 $view_data['can_upload_and_edit_files'] = get_array_value($permissions, "can_upload_and_edit_files");
                 $view_data['can_view_files'] = get_array_value($permissions, "can_view_files");
+
+                $view_data['file_manager_can_view_files'] = get_array_value($permissions, "file_manager_can_view_files");
+                $view_data['file_manager_can_add_folders'] = get_array_value($permissions, "file_manager_can_add_folders");
+                $view_data['file_manager_can_upload_files'] = get_array_value($permissions, "file_manager_can_upload_files");
+                $view_data['file_manager_can_delete_files'] = get_array_value($permissions, "file_manager_can_delete_files");
                 $view_data['can_comment_on_projects'] = get_array_value($permissions, "can_comment_on_projects");
 
                 $view_data['can_access_quick_assistant'] = get_array_value($permissions, "can_access_quick_assistant");
@@ -344,6 +349,11 @@ class Roles extends Security_Controller {
 
         $can_upload_and_edit_files = $this->request->getPost('can_upload_and_edit_files');
         $can_view_files = $this->request->getPost('can_view_files');
+
+        $file_manager_can_view_files = $this->request->getPost('file_manager_can_view_files');
+        $file_manager_can_add_folders = $this->request->getPost('file_manager_can_add_folders');
+        $file_manager_can_upload_files = $this->request->getPost('file_manager_can_upload_files');
+        $file_manager_can_delete_files = $this->request->getPost('file_manager_can_delete_files');
         $can_comment_on_projects = $this->request->getPost('can_comment_on_projects');
 
         $can_access_quick_assistant = $this->request->getPost('can_access_quick_assistant');
@@ -412,6 +422,10 @@ class Roles extends Security_Controller {
             "team_members_note_manage_permission" => $team_members_note_manage_permission,
             "can_upload_and_edit_files" => $can_upload_and_edit_files,
             "can_view_files" => $can_view_files,
+            "file_manager_can_view_files" => $file_manager_can_view_files,
+            "file_manager_can_add_folders" => $file_manager_can_add_folders,
+            "file_manager_can_upload_files" => $file_manager_can_upload_files,
+            "file_manager_can_delete_files" => $file_manager_can_delete_files,
             "can_comment_on_projects" => $can_comment_on_projects,
             "can_access_quick_assistant" => $can_access_quick_assistant,
             "can_access_ai_chatbox" => $can_access_ai_chatbox,

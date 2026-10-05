@@ -1,6 +1,6 @@
 <div id="file-manager-window-area" class="show-context-menu">
 
-    <ul class="files-and-folders-list" data-has_write_permission="<?php echo $has_write_permission; ?>" data-has_upload_permission="<?php echo $has_upload_permission; ?>">
+    <ul class="files-and-folders-list" data-has_write_permission="<?php echo $has_write_permission; ?>" data-has_upload_permission="<?php echo $has_upload_permission; ?>" data-has_file_move_permission="<?php echo $has_file_move_permission; ?>" data-has_file_delete_permission="<?php echo $has_file_delete_permission; ?>">
         <?php
         foreach ($folders_list as $folder) {
             $is_favourite = strpos($folder->starred_by, ":" . $login_user->id . ":") ? 1 : '';

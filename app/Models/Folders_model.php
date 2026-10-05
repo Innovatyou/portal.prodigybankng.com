@@ -64,7 +64,7 @@ class Folders_model extends Crud_model {
             $folder_info->this_folder_permission_rank = $rank_info->this_folder_permission_rank;
             $folder_info->actual_permission_rank = $rank_info->actual_permission_rank;
 
-            if ($has_full_access) {
+            if ($has_full_access && !get_array_value($options, "has_view_only_full_access")) {
                 $folder_info->actual_permission_rank = 9;
             }
 
