@@ -8,6 +8,7 @@ use CodeIgniter\RESTful\ResourceController;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use operations_approval\Libraries\Access_service;
+use operations_approval\Libraries\Approver_sync;
 use operations_approval\Libraries\Attachment_service;
 use operations_approval\Libraries\Audit_service;
 use operations_approval\Libraries\Notification_service;
@@ -47,7 +48,7 @@ class Operations_api extends ResourceController
     }
     public function dashboard():ResponseInterface
     {
-        $user=$this->auth();if(!$user)return $this->unauthorized();$uid=(int)$user->id;
+        $user=$this->auth();if(!$user)return $this->unauthorized();(new Approver_sync())->syncStale(null,null,$user);$uid=(int)$user->id;
         $mine=$this->db->table($this->p.'oa_requests')->where(['requester_id'=>$uid,'deleted'=>0]);
         return $this->respond(['success'=>true,'message'=>'Operations dashboard','data'=>['total'=>(clone $mine)->countAllResults(),'pending'=>(clone $mine)->whereIn('status',['submitted','pending_approval','information_requested'])->countAllResults(),'completed'=>(clone $mine)->where('status','completed')->countAllResults(),'returned'=>(clone $mine)->where('status','returned')->countAllResults(),'pending_approval'=>$this->db->table($this->p.'oa_assignments')->where(['user_id'=>$uid,'status'=>'pending'])->countAllResults(),'can_create'=>(new Operations_permissions())->allowed('operations_create_request',$user)]]);
     }
@@ -90,6 +91,7 @@ class Operations_api extends ResourceController
     public function pending():ResponseInterface
     {
         $user=$this->auth();if(!$user)return $this->unauthorized();
+        (new Approver_sync())->syncStale(null,null,$user);
         // operations_admin_override: same reasoning as Operations::pending()
         // (web) - an inbox of the user's own assignments would be empty by
         // default for them, so show every request org-wide actually
@@ -103,9 +105,11 @@ class Operations_api extends ResourceController
     }
     public function show($id = null):ResponseInterface
     {
-        $id=(int)$id;$user=$this->auth();if(!$user)return $this->unauthorized();$request=$this->requestRow($id);if(!$request||(new Access_service())->canView((object)$request,$user)===false)return $this->respond(['success'=>false,'message'=>'Forbidden'],403);
+        $id=(int)$id;$user=$this->auth();if(!$user)return $this->unauthorized();(new Approver_sync())->syncStale(null,$id,$user);$request=$this->requestRow($id);if(!$request||(new Access_service())->canView((object)$request,$user)===false)return $this->respond(['success'=>false,'message'=>'Forbidden'],403);
         $request['values']=$this->db->table($this->p.'oa_request_values')->select('field_key,value_text,value_json')->where(['request_id'=>$id,'revision_no'=>$request['revision_no']])->get()->getResultArray();
         $request['timeline']=$this->db->table($this->p.'oa_stage_instances i')->select('i.id,i.name_snapshot,i.type_snapshot,i.status,i.activated_at,i.completed_at,i.due_at,d.decision,d.comment,d.actor_name_snapshot,d.created_at decision_at')->join($this->p.'oa_decisions d','d.stage_instance_id=i.id','left')->where('i.request_id',$id)->orderBy('i.position')->orderBy('d.created_at')->get()->getResultArray();
+        $awaiting=[];foreach($this->db->table($this->p.'oa_assignments a')->select("a.stage_instance_id,CONCAT(u.first_name,' ',u.last_name) name")->join($this->p.'oa_stage_instances i','i.id=a.stage_instance_id')->join($this->p.'users u','u.id=a.user_id','left')->where(['i.request_id'=>$id,'a.status'=>'pending'])->whereIn('i.status',['active','overdue'])->get()->getResultArray() as $row)$awaiting[(int)$row['stage_instance_id']][]=trim((string)$row['name']);
+        foreach($request['timeline'] as &$timelineRow)$timelineRow['awaiting_approvers']=$awaiting[(int)$timelineRow['id']]??[];unset($timelineRow);
         $request['comments']=$this->db->table($this->p.'oa_comments')->select('user_name_snapshot,comment,visibility,created_at')->where('request_id',$id)->orderBy('created_at')->get()->getResultArray();
         $request['conversations']=$this->db->table($this->p.'oa_conversations')->where('request_id',$id)->orderBy('opened_at')->get()->getResultArray();
         $request['attachments']=$this->db->table($this->p.'oa_attachments')->select('id,original_name,mime_type,size_bytes,context,created_at')->where(['request_id'=>$id,'deleted_at'=>null])->orderBy('created_at')->get()->getResultArray();

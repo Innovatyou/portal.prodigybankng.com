@@ -5,6 +5,7 @@ namespace operations_approval\Controllers;
 use App\Controllers\Security_Controller;
 use operations_approval\Libraries\Audit_service;
 use operations_approval\Libraries\Access_service;
+use operations_approval\Libraries\Approver_sync;
 use operations_approval\Libraries\Attachment_service;
 use operations_approval\Libraries\Custom_field_service;
 use operations_approval\Libraries\Delegation_service;
@@ -31,6 +32,7 @@ class Operations extends Security_Controller
 
     public function index()
     {
+        (new Approver_sync())->syncStale(null, null, $this->login_user);
         $userId = (int) $this->login_user->id;
         $hasOverride = $this->hasAdminOverride();
         $base = $this->db->table($this->p . 'oa_requests')->where('deleted', 0);
@@ -102,6 +104,7 @@ class Operations extends Security_Controller
 
     public function pending()
     {
+        (new Approver_sync())->syncStale(null, null, $this->login_user);
         // operations_admin_override: rather than an inbox of the user's
         // own assignments (they hold none by default), show every request
         // org-wide that's actually waiting on a decision - this is what
@@ -211,6 +214,11 @@ class Operations extends Security_Controller
         $data['values'] = $this->db->table($this->p . 'oa_request_values rv')->select('rv.*, f.field_type')->join($this->p . 'oa_fields f', 'f.id=rv.field_id', 'left')->where(['rv.request_id' => $id, 'rv.revision_no' => $request->revision_no])->get()->getResult();
         $data['customFields'] = (new Custom_field_service())->list($id);
         $data['timeline'] = $this->db->table($this->p . 'oa_stage_instances i')->select('i.*, d.decision, d.comment, d.actor_name_snapshot, d.created_at decision_at')->join($this->p . 'oa_decisions d', 'd.stage_instance_id=i.id', 'left')->where('i.request_id', $id)->orderBy('i.position')->orderBy('d.created_at')->get()->getResult();
+        // Who each still-open stage is waiting on, so a changed approver
+        // is visible on the timeline (not just in their own inbox).
+        $data['awaiting'] = [];
+        $awaitingRows = $this->db->table($this->p . 'oa_assignments a')->select("a.stage_instance_id, CONCAT(u.first_name,' ',u.last_name) name")->join($this->p . 'oa_stage_instances i', 'i.id=a.stage_instance_id')->join($this->p . 'users u', 'u.id=a.user_id', 'left')->where(['i.request_id' => $id, 'a.status' => 'pending'])->whereIn('i.status', ['active', 'overdue'])->get()->getResult();
+        foreach ($awaitingRows as $row) $data['awaiting'][(int) $row->stage_instance_id][] = trim((string) $row->name);
         $data['comments'] = $this->db->table($this->p . 'oa_comments')->where('request_id', $id)->orderBy('created_at')->get()->getResult();
         $data['attachments'] = $this->db->table($this->p . 'oa_attachments')->where(['request_id' => $id, 'deleted_at' => null])->orderBy('created_at')->get()->getResult();
         $data['conversations'] = $this->db->table($this->p . 'oa_conversations')->where('request_id', $id)->orderBy('opened_at')->get()->getResult();
@@ -233,6 +241,7 @@ class Operations extends Security_Controller
 
     public function view(int $id)
     {
+        (new Approver_sync())->syncStale(null, $id, $this->login_user);
         $data = $this->requestReportData($id);
         $request = $data['request'];
         $isAssignedApprover = $request->current_stage_instance_id && $this->db->table($this->p . 'oa_assignments')->where(['stage_instance_id' => $request->current_stage_instance_id, 'user_id' => $this->login_user->id, 'status' => 'pending'])->countAllResults() > 0;
