@@ -125,9 +125,31 @@
 <script type='text/javascript'>
     feather.replace();
 
+    // Phones/tablets (below 991px, where app.all.css has no collapsed mode):
+    // .sidebar-toggled means "menu open full-screen", and it must never
+    // carry over to the next page. A left_menu_minimized cookie left behind
+    // (see toggleLeftMenu()) or the browser restoring the previous page from
+    // its back/forward cache used to reopen it on every page until the close
+    // icon was tapped. This runs while the page is still parsing - before
+    // general_helper.js's ready handler looks at the class.
+    var isMobileSidebar = function() { return !window.matchMedia('(min-width: 991px)').matches; };
+    if (isMobileSidebar()) document.body.classList.remove('sidebar-toggled');
+
     $(document).ready(function() {
         $("#sidebar-menu li").click(function() {
             $("#sidebar-menu li.active").removeClass("active");
+        });
+
+        // Tapping a page link in the open mobile menu closes the menu straight
+        // away; tapping a parent item only expands/collapses its submenu.
+        $("#sidebar-menu").on("click", "a", function() {
+            if (!isMobileSidebar() || !$("body").hasClass("sidebar-toggled")) return;
+            var href = $(this).attr("href") || "";
+            if (!href || href === "#" || href.indexOf("javascript:") === 0 || $(this).parent().hasClass("expand")) return;
+            toggleLeftMenu(true);
+        });
+        window.addEventListener("pageshow", function(e) {
+            if (e.persisted && isMobileSidebar() && $("body").hasClass("sidebar-toggled")) toggleLeftMenu(true);
         });
 
         // Interactive 3D tilt: the CSS hover lift (custom-style.css) is a
@@ -161,8 +183,12 @@
         // with a short grace period instead of relying purely on :hover,
         // the standard fix for this class of flyout menu.
         var flyoutCloseTimer = null;
+        // Desktop only: on phones .sidebar-toggled means the full-screen
+        // menu is open (no flyouts), and a tap fires mouseenter too.
+        var isDesktopSidebar = function() { return window.matchMedia('(min-width: 991px)').matches; };
         $(document).on('mouseenter', '.sidebar-toggled .sidebar-menu > li.main', function() {
             clearTimeout(flyoutCloseTimer);
+            if (!isDesktopSidebar()) return;
             $(this).addClass('js-flyout-open');
         }).on('mouseleave', '.sidebar-toggled .sidebar-menu > li.main', function() {
             var $li = $(this);
